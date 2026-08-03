@@ -19,14 +19,32 @@ const asciiTokens = (value, radix, width) =>
     char.codePointAt(0).toString(radix).padStart(width, "0").toUpperCase()
   );
 
+// Flattens either shape into one line, for the corner label.
+const toText = (value) => {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return typeof value === "string"
+    ? value
+    : value.tokens.join(value.separator);
+};
+
 // Returns a plain string, or { tokens, separator } for a wrappable encoded block.
-const encode = (mode, { plain, numeric }, base) => {
+// `minDigits` left-pads the numeric encodings with zeros to a fixed width; it is
+// a minimum, never a truncation, so a value longer than minDigits is untouched.
+const encode = (mode, { plain, numeric }, base, minDigits) => {
   const radix = RADIX[base] || RADIX.binary;
 
-  if (mode === "compact") {
-    return Number.isFinite(Number(numeric))
-      ? Number(numeric).toString(radix).toUpperCase()
-      : null;
+  if (mode === "compact" || mode === "datetime") {
+    if (!Number.isFinite(Number(numeric))) {
+      return null;
+    }
+
+    const digits = Number(numeric).toString(radix).toUpperCase();
+    const width = parseInt(minDigits, 10);
+
+    return width > 0 ? digits.padStart(width, "0") : digits;
   }
 
   if (mode === "ascii") {
@@ -69,6 +87,7 @@ export default class WatermarkBackground extends Component {
     .map((v) => new RegExp(v));
 
   #domElement;
+  #cornerElement;
 
   constructor() {
     super(...arguments);
@@ -218,6 +237,38 @@ export default class WatermarkBackground extends Component {
   }
 
   @action
+  setCornerElement(element) {
+    this.#cornerElement = element;
+  }
+
+  // The corner label is a plain DOM node rather than part of the tiled canvas,
+  // so it is never rotated and is positioned by CSS class instead of x/y.
+  @action
+  renderCornerLabel(username, timestamp) {
+    const cornerDiv = this.#cornerElement;
+
+    if (!cornerDiv) {
+      return;
+    }
+
+    const parts = [toText(username), toText(timestamp)].filter(
+      (part) => part !== ""
+    );
+
+    if (!settings.show_corner_label || parts.length === 0) {
+      cornerDiv.textContent = "";
+      cornerDiv.style.display = "none";
+      return;
+    }
+
+    cornerDiv.textContent = parts.join(" / ");
+    cornerDiv.className = settings.corner_label_position || "bottom-right";
+    cornerDiv.style.color = settings.corner_label_color;
+    cornerDiv.style.font = settings.corner_label_font;
+    cornerDiv.style.display = "block";
+  }
+
+  @action
   refreshWatermark() {
     schedule("afterRender", () => {
       if (this.shouldShowWatermark) {
@@ -233,6 +284,11 @@ export default class WatermarkBackground extends Component {
   clearWatermark() {
     const watermarkDiv = this.#domElement;
     watermarkDiv.style.backgroundImage = "";
+
+    if (this.#cornerElement) {
+      this.#cornerElement.textContent = "";
+      this.#cornerElement.style.display = "none";
+    }
   }
 
   @action
@@ -263,25 +319,38 @@ export default class WatermarkBackground extends Component {
       username = encode(
         settings.username_encoding,
         { plain: this.currentUser.username, numeric: this.currentUser.id },
-        settings.encoding_radix
+        settings.encoding_radix,
+        settings.compact_username_digits
       );
     }
 
     let timestamp = null;
     if (settings.display_timestamp) {
+      const mode = settings.timestamp_encoding;
+
+      // "datetime" packs the calendar fields straight into one number, so the
+      // decoded decimal reads off as MMDDYYYYHHmmss with no epoch maths.
+      // HH, not hh: a 12-hour clock cannot tell midnight from noon.
+      // Everything else uses seconds since the Unix epoch, which every epoch
+      // converter understands without a multiplier.
+      const numeric =
+        mode === "datetime"
+          ? Number(moment().format("MMDDYYYYHHmmss"))
+          : Math.floor(Date.now() / 1000);
+
       timestamp = encode(
-        settings.timestamp_encoding,
+        mode,
         {
           plain: moment().format(settings.display_timestamp_format),
-          // minutes since the Unix epoch; decode with
-          // new Date(parseInt(digits, radix) * 60000)
-          numeric: Math.floor(Date.now() / 60000)
+          numeric
         },
         settings.encoding_radix
       );
     }
 
     const data = { username, timestamp };
+
+    this.renderCornerLabel(username, timestamp);
 
     const watermark = renderWatermarkDataURL(
       canvas,
@@ -312,5 +381,6 @@ export default class WatermarkBackground extends Component {
       class={{if @scrollEnabled "scroll" "fixed"}}
       {{didInsert this.setDomElement}}
     />
+    <div id="watermark-corner" {{didInsert this.setCornerElement}} />
   </template>
 }
