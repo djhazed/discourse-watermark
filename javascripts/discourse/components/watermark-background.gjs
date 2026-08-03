@@ -9,6 +9,8 @@ import renderWatermarkDataURL from "../helpers/render-watermark";
 
 const RADIX = { binary: 2, hex: 16 };
 
+const DEFAULT_DATETIME_PATTERN = "MMDDYYYYHHmm";
+
 // digits needed to represent one 8-bit character in each base
 const CHAR_WIDTH = { binary: 8, hex: 2 };
 
@@ -329,13 +331,18 @@ export default class WatermarkBackground extends Component {
       const mode = settings.timestamp_encoding;
 
       // "datetime" packs the calendar fields straight into one number, so the
-      // decoded decimal reads off as MMDDYYYYHHmmss with no epoch maths.
-      // HH, not hh: a 12-hour clock cannot tell midnight from noon.
+      // decoded decimal reads off as the pattern itself with no epoch maths.
+      // Non-digits are stripped, so a pattern may contain separators for
+      // readability; only the digit count matters when decoding.
       // Everything else uses seconds since the Unix epoch, which every epoch
       // converter understands without a multiplier.
       const numeric =
         mode === "datetime"
-          ? Number(moment().format("MMDDYYYYHHmmss"))
+          ? Number(
+              moment()
+                .format(settings.datetime_pattern || DEFAULT_DATETIME_PATTERN)
+                .replace(/\D/g, "")
+            )
           : Math.floor(Date.now() / 1000);
 
       timestamp = encode(
