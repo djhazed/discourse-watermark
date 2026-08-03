@@ -233,9 +233,10 @@ timestamp_encoding:
   choices:
     - plain
     - compact
+    - datetime
     - ascii
   description:
-    en: "How the timestamp is rendered. 'plain' uses the format string above; 'compact' shows minutes since the Unix epoch in binary; 'ascii' shows each character of the formatted timestamp as its 8-bit code point."
+    en: "How the timestamp is rendered. 'plain' uses the format string above. 'compact' encodes seconds since the Unix epoch. 'datetime' encodes the digits of MMDDYYYYHHmmss as a single number, so the decoded decimal reads off directly as a date — pad it back to 14 digits. 'ascii' encodes each character of the formatted timestamp separately."
 
 fit_width_percent:
   default: 100
@@ -267,3 +268,40 @@ encoding_radix:
     - hex
   description:
     en: "Number base used by the compact and ascii encodings. Hex is about four times shorter than binary, so it renders at a larger font size in the same tile. Has no effect where the encoding is set to plain."
+
+compact_username_digits:
+  default: 6
+  min: 0
+  max: 64
+  type: integer
+  description:
+    en: "Minimum width of the compact username encoding, left-padded with zeros. This is a minimum, never a truncation. Six hex digits covers user IDs up to 16,777,215; in binary you would need 24 for the same range. Set to 0 to disable padding. Has no effect on the plain or ascii encodings."
+
+show_corner_label:
+  default: false
+  type: bool
+  description:
+    en: "In addition to the tiled watermark, show the encoded username and timestamp once, in a fixed screen corner, unrotated."
+
+corner_label_position:
+  default: bottom-right
+  type: enum
+  choices:
+    - bottom-right
+    - bottom-left
+    - top-right
+    - top-left
+  description:
+    en: "Which screen corner the label is pinned to."
+
+corner_label_color:
+  default: "var(--primary-medium)"
+  type: string
+  description:
+    en: "Colour of the corner label. Accepts any CSS colour, including rgba() for transparency and Discourse variables such as var(--primary-low)."
+
+corner_label_font:
+  default: "bold 0.75rem monospace"
+  type: string
+  description:
+    en: "Font for the corner label, parsed as a CSS font shorthand value."
