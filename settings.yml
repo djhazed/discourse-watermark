@@ -216,3 +216,45 @@ display_timestamp_y:
     en: "The y-axis coordinate of the point at which to begin drawing the timestamp in the tile canvas, in pixels."
     pt_BR: "A coordenada no eixo y para o ponto em que a data/horário deve ser desenhada no canvas do bloco, em pixels."
     zh_CN: "在方片画布中绘制时戳时，y 轴坐标的起点（px）"
+
+username_encoding:
+  default: plain
+  type: enum
+  choices:
+    - plain
+    - compact
+    - ascii
+  description:
+    en: "How the username is rendered. 'plain' shows it as text; 'compact' shows the numeric user ID in binary; 'ascii' shows each character of the username as its 8-bit code point."
+
+timestamp_encoding:
+  default: plain
+  type: enum
+  choices:
+    - plain
+    - compact
+    - ascii
+  description:
+    en: "How the timestamp is rendered. 'plain' uses the format string above; 'compact' shows minutes since the Unix epoch in binary; 'ascii' shows each character of the formatted timestamp as its 8-bit code point."
+
+fit_width_percent:
+  default: 100
+  min: 25
+  max: 200
+  type: integer
+  description:
+    en: "Usable text width as a percentage of tile width. Text is shrunk and wrapped to fit. Because the watermark is rotated, values above 100 can still fit inside the tile."
+
+line_height_percent:
+  default: 125
+  min: 100
+  max: 300
+  type: integer
+  description:
+    en: "Spacing between wrapped lines, as a percentage of the fitted font size."
+
+stack_blocks:
+  default: true
+  type: bool
+  description:
+    en: "If enabled, a block that wraps onto extra lines pushes the blocks below it down instead of overprinting them."
