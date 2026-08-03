@@ -258,3 +258,12 @@ stack_blocks:
   type: bool
   description:
     en: "If enabled, a block that wraps onto extra lines pushes the blocks below it down instead of overprinting them."
+
+encoding_radix:
+  default: binary
+  type: enum
+  choices:
+    - binary
+    - hex
+  description:
+    en: "Number base used by the compact and ascii encodings. Hex is about four times shorter than binary, so it renders at a larger font size in the same tile. Has no effect where the encoding is set to plain."
