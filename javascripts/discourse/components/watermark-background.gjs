@@ -7,22 +7,33 @@ import Category from "discourse/models/category";
 import { getComputedColor, getComputedFont } from "../helpers/computed-values";
 import renderWatermarkDataURL from "../helpers/render-watermark";
 
-const CHAR_BITS = 8;
+const RADIX = { binary: 2, hex: 16 };
 
-// "jsm" -> ["01101010", "01110011", "01101101"]
-const asciiTokens = (value) =>
+// digits needed to represent one 8-bit character in each base
+const CHAR_WIDTH = { binary: 8, hex: 2 };
+
+// "jsm", binary -> ["01101010", "01110011", "01101101"]
+// "jsm", hex    -> ["6A", "73", "6D"]
+const asciiTokens = (value, radix, width) =>
   Array.from(String(value)).map((char) =>
-    char.codePointAt(0).toString(2).padStart(CHAR_BITS, "0")
+    char.codePointAt(0).toString(radix).padStart(width, "0").toUpperCase()
   );
 
-// Returns a plain string, or { tokens, separator } for a wrappable binary block.
-const encode = (mode, { plain, numeric }) => {
+// Returns a plain string, or { tokens, separator } for a wrappable encoded block.
+const encode = (mode, { plain, numeric }, base) => {
+  const radix = RADIX[base] || RADIX.binary;
+
   if (mode === "compact") {
-    return Number.isFinite(Number(numeric)) ? Number(numeric).toString(2) : null;
+    return Number.isFinite(Number(numeric))
+      ? Number(numeric).toString(radix).toUpperCase()
+      : null;
   }
 
   if (mode === "ascii") {
-    return { tokens: asciiTokens(plain), separator: " " };
+    return {
+      tokens: asciiTokens(plain, radix, CHAR_WIDTH[base] || CHAR_WIDTH.binary),
+      separator: " "
+    };
   }
 
   return plain;
@@ -249,20 +260,25 @@ export default class WatermarkBackground extends Component {
 
     let username = null;
     if (settings.display_username && this.currentUser) {
-      username = encode(settings.username_encoding, {
-        plain: this.currentUser.username,
-        numeric: this.currentUser.id
-      });
+      username = encode(
+        settings.username_encoding,
+        { plain: this.currentUser.username, numeric: this.currentUser.id },
+        settings.encoding_radix
+      );
     }
 
     let timestamp = null;
     if (settings.display_timestamp) {
-      timestamp = encode(settings.timestamp_encoding, {
-        plain: moment().format(settings.display_timestamp_format),
-        // minutes since the Unix epoch; decode with
-        // new Date(parseInt(bits, 2) * 60000)
-        numeric: Math.floor(Date.now() / 60000)
-      });
+      timestamp = encode(
+        settings.timestamp_encoding,
+        {
+          plain: moment().format(settings.display_timestamp_format),
+          // minutes since the Unix epoch; decode with
+          // new Date(parseInt(digits, radix) * 60000)
+          numeric: Math.floor(Date.now() / 60000)
+        },
+        settings.encoding_radix
+      );
     }
 
     const data = { username, timestamp };
