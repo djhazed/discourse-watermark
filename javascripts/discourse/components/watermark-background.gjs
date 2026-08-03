@@ -7,6 +7,27 @@ import Category from "discourse/models/category";
 import { getComputedColor, getComputedFont } from "../helpers/computed-values";
 import renderWatermarkDataURL from "../helpers/render-watermark";
 
+const CHAR_BITS = 8;
+
+// "jsm" -> ["01101010", "01110011", "01101101"]
+const asciiTokens = (value) =>
+  Array.from(String(value)).map((char) =>
+    char.codePointAt(0).toString(2).padStart(CHAR_BITS, "0")
+  );
+
+// Returns a plain string, or { tokens, separator } for a wrappable binary block.
+const encode = (mode, { plain, numeric }) => {
+  if (mode === "compact") {
+    return Number.isFinite(Number(numeric)) ? Number(numeric).toString(2) : null;
+  }
+
+  if (mode === "ascii") {
+    return { tokens: asciiTokens(plain), separator: " " };
+  }
+
+  return plain;
+};
+
 export default class WatermarkBackground extends Component {
   @service appEvents;
   @service currentUser;
@@ -226,12 +247,25 @@ export default class WatermarkBackground extends Component {
       settings.display_timestamp_font
     );
 
-    const data = {
-      username: settings.display_username ? this.currentUser?.username : null,
-      timestamp: settings.display_timestamp
-        ? moment().format(settings.display_timestamp_format)
-        : null
-    };
+    let username = null;
+    if (settings.display_username && this.currentUser) {
+      username = encode(settings.username_encoding, {
+        plain: this.currentUser.username,
+        numeric: this.currentUser.id
+      });
+    }
+
+    let timestamp = null;
+    if (settings.display_timestamp) {
+      timestamp = encode(settings.timestamp_encoding, {
+        plain: moment().format(settings.display_timestamp_format),
+        // minutes since the Unix epoch; decode with
+        // new Date(parseInt(bits, 2) * 60000)
+        numeric: Math.floor(Date.now() / 60000)
+      });
+    }
+
+    const data = { username, timestamp };
 
     const watermark = renderWatermarkDataURL(
       canvas,
