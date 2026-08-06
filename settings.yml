@@ -352,3 +352,21 @@ username_label_font:
   type: string
   description:
     en: "Font for the plaintext username label, parsed as a CSS font shorthand value. For anything beyond colour and font, target #watermark-username-corner in the theme's CSS."
+
+tile_show_timestamp:
+  default: true
+  type: bool
+  description:
+    en: "Include the timestamp in the repeating background tiles. Requires the display timestamp setting to be on."
+
+corner_show_timestamp:
+  default: true
+  type: bool
+  description:
+    en: "Include the timestamp in the encoded corner label. Requires the display timestamp setting to be on."
+
+username_label_show_timestamp:
+  default: false
+  type: bool
+  description:
+    en: "Include the timestamp in the plaintext username label. Always shown as readable text using the timestamp format setting, never encoded. Requires the display timestamp setting to be on."
