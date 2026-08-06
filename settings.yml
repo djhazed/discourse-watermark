@@ -311,3 +311,44 @@ datetime_pattern:
   type: string
   description:
     en: "Moment.js format used by the 'datetime' timestamp encoding. Non-digit characters are stripped, so separators may be included for readability. Use HH for 24-hour time — hh cannot distinguish midnight from noon. When decoding, zero-pad the result back to the number of digits this pattern produces: 12 for MMDDYYYYHHmm, 14 for MMDDYYYYHHmmss. Keep it under 15 digits to stay within JavaScript's exact-integer range."
+
+combine_tile_fields:
+  default: true
+  type: bool
+  description:
+    en: "Draw the username and timestamp as one line in the repeating background tile, joined by the separator below, instead of as two stacked blocks. The combined line uses the username's font, x and y; the timestamp's own position and font settings are unused in this mode. Turn off to restore the two-block layout."
+
+combined_separator:
+  default: " / "
+  type: string
+  description:
+    en: "Text placed between the username and the timestamp when they are combined, both in the tile and in the corner label."
+
+show_username_label:
+  default: false
+  type: bool
+  description:
+    en: "Show the viewer's plaintext username pinned to a screen corner, unrotated. Independent of the encoded corner label and of the username encoding setting — this is always readable text."
+
+username_label_position:
+  default: bottom-left
+  type: enum
+  choices:
+    - bottom-right
+    - bottom-left
+    - top-right
+    - top-left
+  description:
+    en: "Which screen corner the plaintext username is pinned to. If it shares a corner with the encoded label, it is offset so the two do not overprint."
+
+username_label_color:
+  default: "var(--primary-medium)"
+  type: string
+  description:
+    en: "Colour of the plaintext username label. Accepts any CSS colour, including rgba() and Discourse variables such as var(--primary-low)."
+
+username_label_font:
+  default: "bold 0.75rem monospace"
+  type: string
+  description:
+    en: "Font for the plaintext username label, parsed as a CSS font shorthand value. For anything beyond colour and font, target #watermark-username-corner in the theme's CSS."
