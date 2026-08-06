@@ -19,7 +19,8 @@ div#watermark-background {
 
   pointer-events: none;
 }
-div#watermark-corner {
+div#watermark-corner,
+div#watermark-username-corner {
   position: fixed;
   z-index: 1000;
 
@@ -41,12 +42,25 @@ div#watermark-corner {
   }
 
   &.top-right {
-    top: var(--header-offset, 0);
+    top: var(--header-offset, 0px);
     right: 0;
   }
 
   &.top-left {
-    top: var(--header-offset, 0);
+    top: var(--header-offset, 0px);
     left: 0;
+  }
+
+  // applied when both labels share a corner, so they do not overprint
+  &.stacked {
+    &.bottom-right,
+    &.bottom-left {
+      bottom: 1.6rem;
+    }
+
+    &.top-right,
+    &.top-left {
+      top: calc(var(--header-offset, 0px) + 1.6rem);
+    }
   }
 }
