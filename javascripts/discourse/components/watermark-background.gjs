@@ -253,12 +253,26 @@ export default class WatermarkBackground extends Component {
   // so it is never rotated and is positioned by CSS class instead of x/y.
   @action
   renderCornerLabels(username, timestamp) {
-    const encodedText = [toText(username), toText(timestamp)]
-      .filter((part) => part !== "")
-      .join(settings.combined_separator || " / ");
+    const separator = settings.combined_separator || " / ";
+    const join = (parts) => parts.filter((part) => part !== "").join(separator);
+
+    // Each surface decides for itself whether the timestamp rides along.
+    const encodedText = join([
+      toText(username),
+      settings.corner_show_timestamp ? toText(timestamp) : ""
+    ]);
+
+    // The plaintext label is the readable one, so its timestamp is readable
+    // too — it never follows timestamp_encoding.
+    const plainText = join([
+      this.currentUser ? this.currentUser.username : "",
+      settings.display_timestamp && settings.username_label_show_timestamp
+        ? moment().format(settings.display_timestamp_format)
+        : ""
+    ]);
 
     const encodedOn = settings.show_corner_label && encodedText !== "";
-    const plainOn = settings.show_username_label && !!this.currentUser;
+    const plainOn = settings.show_username_label && plainText !== "";
 
     const encodedPos = settings.corner_label_position || "bottom-right";
     const plainPos = settings.username_label_position || "bottom-left";
@@ -272,7 +286,7 @@ export default class WatermarkBackground extends Component {
     });
 
     this.#paintLabel(this.#usernameLabelElement, plainOn, {
-      text: plainOn ? this.currentUser.username : "",
+      text: plainText,
       position: plainPos,
       color: settings.username_label_color,
       font: settings.username_label_font,
@@ -392,13 +406,15 @@ export default class WatermarkBackground extends Component {
     // two fields into one string guarantees a single line: it shrinks to fit
     // rather than breaking. Uses the username block's font, x and y; the
     // timestamp's own position and font settings go unused in this mode.
-    const combined = [toText(username), toText(timestamp)]
+    const tileTimestamp = settings.tile_show_timestamp ? timestamp : null;
+
+    const combined = [toText(username), toText(tileTimestamp)]
       .filter((part) => part !== "")
       .join(settings.combined_separator || " / ");
 
     const data = settings.combine_tile_fields
       ? { username: combined === "" ? null : combined, timestamp: null }
-      : { username, timestamp };
+      : { username, timestamp: tileTimestamp };
 
     const watermark = renderWatermarkDataURL(
       canvas,
