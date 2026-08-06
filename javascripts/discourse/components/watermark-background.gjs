@@ -90,6 +90,7 @@ export default class WatermarkBackground extends Component {
 
   #domElement;
   #cornerElement;
+  #usernameLabelElement;
 
   constructor() {
     super(...arguments);
@@ -243,31 +244,59 @@ export default class WatermarkBackground extends Component {
     this.#cornerElement = element;
   }
 
+  @action
+  setUsernameLabelElement(element) {
+    this.#usernameLabelElement = element;
+  }
+
   // The corner label is a plain DOM node rather than part of the tiled canvas,
   // so it is never rotated and is positioned by CSS class instead of x/y.
   @action
-  renderCornerLabel(username, timestamp) {
-    const cornerDiv = this.#cornerElement;
+  renderCornerLabels(username, timestamp) {
+    const encodedText = [toText(username), toText(timestamp)]
+      .filter((part) => part !== "")
+      .join(settings.combined_separator || " / ");
 
-    if (!cornerDiv) {
+    const encodedOn = settings.show_corner_label && encodedText !== "";
+    const plainOn = settings.show_username_label && !!this.currentUser;
+
+    const encodedPos = settings.corner_label_position || "bottom-right";
+    const plainPos = settings.username_label_position || "bottom-left";
+
+    this.#paintLabel(this.#cornerElement, encodedOn, {
+      text: encodedText,
+      position: encodedPos,
+      color: settings.corner_label_color,
+      font: settings.corner_label_font,
+      stacked: false
+    });
+
+    this.#paintLabel(this.#usernameLabelElement, plainOn, {
+      text: plainOn ? this.currentUser.username : "",
+      position: plainPos,
+      color: settings.username_label_color,
+      font: settings.username_label_font,
+      // both labels in one corner would overprint, so offset this one
+      stacked: encodedOn && plainOn && encodedPos === plainPos
+    });
+  }
+
+  #paintLabel(element, visible, { text, position, color, font, stacked }) {
+    if (!element) {
       return;
     }
 
-    const parts = [toText(username), toText(timestamp)].filter(
-      (part) => part !== ""
-    );
-
-    if (!settings.show_corner_label || parts.length === 0) {
-      cornerDiv.textContent = "";
-      cornerDiv.style.display = "none";
+    if (!visible) {
+      element.textContent = "";
+      element.style.display = "none";
       return;
     }
 
-    cornerDiv.textContent = parts.join(" / ");
-    cornerDiv.className = settings.corner_label_position || "bottom-right";
-    cornerDiv.style.color = settings.corner_label_color;
-    cornerDiv.style.font = settings.corner_label_font;
-    cornerDiv.style.display = "block";
+    element.textContent = text;
+    element.className = stacked ? `${position} stacked` : position;
+    element.style.color = color;
+    element.style.font = font;
+    element.style.display = "block";
   }
 
   @action
@@ -287,9 +316,11 @@ export default class WatermarkBackground extends Component {
     const watermarkDiv = this.#domElement;
     watermarkDiv.style.backgroundImage = "";
 
-    if (this.#cornerElement) {
-      this.#cornerElement.textContent = "";
-      this.#cornerElement.style.display = "none";
+    for (const label of [this.#cornerElement, this.#usernameLabelElement]) {
+      if (label) {
+        label.textContent = "";
+        label.style.display = "none";
+      }
     }
   }
 
@@ -355,9 +386,19 @@ export default class WatermarkBackground extends Component {
       );
     }
 
-    const data = { username, timestamp };
+    this.renderCornerLabels(username, timestamp);
 
-    this.renderCornerLabel(username, timestamp);
+    // The fitter only wraps token lists, never plain strings, so joining the
+    // two fields into one string guarantees a single line: it shrinks to fit
+    // rather than breaking. Uses the username block's font, x and y; the
+    // timestamp's own position and font settings go unused in this mode.
+    const combined = [toText(username), toText(timestamp)]
+      .filter((part) => part !== "")
+      .join(settings.combined_separator || " / ");
+
+    const data = settings.combine_tile_fields
+      ? { username: combined === "" ? null : combined, timestamp: null }
+      : { username, timestamp };
 
     const watermark = renderWatermarkDataURL(
       canvas,
@@ -389,5 +430,9 @@ export default class WatermarkBackground extends Component {
       {{didInsert this.setDomElement}}
     />
     <div id="watermark-corner" {{didInsert this.setCornerElement}} />
+    <div
+      id="watermark-username-corner"
+      {{didInsert this.setUsernameLabelElement}}
+    />
   </template>
 }
